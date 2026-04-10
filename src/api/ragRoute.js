@@ -13,10 +13,10 @@ router.post('/', async (req, res) => {
     }
 
     const results = await retrieveContext(question, Number(topK) || 5);
-    console.log(`Retrieved ${results.results.length} chunks for question: ${question}`);
+    // console.log(`Retrieved ${results.results.length} chunks for question: ${question}`);
     
     const answerResponse = await generateAnswer(question, results.context, results.sources);
-    console.log(`Generated answer for question: ${question}`);
+    console.log(`Generated answer for question: ${answerResponse.answer}`);
     
     return res.json({
       question,
