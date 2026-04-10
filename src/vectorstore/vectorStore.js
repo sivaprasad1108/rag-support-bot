@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 // in-memory vector store with cosine similarity search
 
 class VectorStore {
@@ -123,6 +126,30 @@ class VectorStore {
    */
   getAll() {
     return this.vectors;
+  }
+
+  /**
+   * Load vectors from JSON files in a directory
+   * @param {string} directoryPath
+   */
+  loadFromDirectory(directoryPath) {
+    if (!directoryPath || !fs.existsSync(directoryPath)) {
+      return;
+    }
+
+    const files = fs.readdirSync(directoryPath).filter(file => file.endsWith('.json'));
+    files.forEach(file => {
+      const filePath = path.join(directoryPath, file);
+      try {
+        const fileContents = fs.readFileSync(filePath, 'utf-8');
+        const documents = JSON.parse(fileContents);
+        if (Array.isArray(documents)) {
+          this.insertBatch(documents);
+        }
+      } catch (error) {
+        console.warn(`Unable to load vector file ${filePath}: ${error.message}`);
+      }
+    });
   }
 }
 

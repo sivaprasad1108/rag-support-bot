@@ -14,6 +14,13 @@ if (validApiKey) {
 
 const vectorStore = new VectorStore();
 
+try {
+  vectorStore.loadFromDirectory(config.vectorStorePath);
+  console.log(`Loaded ${vectorStore.size()} vectors from ${config.vectorStorePath}`);
+} catch (error) {
+  console.warn(`Failed to load persisted vectors: ${error.message}`);
+}
+
 function deterministicMockEmbedding(query) {
   const length = 1536;
   const embedding = new Array(length);

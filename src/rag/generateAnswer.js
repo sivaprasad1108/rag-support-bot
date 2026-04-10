@@ -11,8 +11,6 @@ if (validApiKey) {
   console.warn('OPENAI_API_KEY is missing or invalid; generateAnswer will use a mock response for testing.');
 }
 
-const DEFAULT_MODEL = 'gpt-3.5-turbo';
-
 async function generateAnswer(question, context, sources = []) {
   if (!question || typeof question !== 'string') {
     throw new Error('Question must be a non-empty string');
@@ -22,7 +20,7 @@ async function generateAnswer(question, context, sources = []) {
     throw new Error('Context must be provided as a string');
   }
 
-  const model = config.answerModel || DEFAULT_MODEL;
+  const model = config.answerModel;
   const systemPrompt = `You are an assistant that answers questions only using the provided context. Do not answer from your own knowledge or invent facts. If the answer cannot be found in the provided context, respond exactly:\n\n"I don’t have enough information from the provided source."`;
 
   const messages = [

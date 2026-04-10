@@ -1,6 +1,6 @@
 const express = require('express');
 const config = require('./config');
-const askRoute = require('./api/askRoute');
+const ragRoute = require('./api/ragRoute');
 
 const app = express();
 
@@ -8,7 +8,7 @@ const app = express();
 app.use(express.json());
 
 // Register the /ask route
-app.use('/ask', askRoute);
+app.use('/ask', ragRoute);
 
 // Start the server
 app.listen(config.port, () => {
