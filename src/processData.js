@@ -11,7 +11,7 @@ async function processRawData() {
 
   for (const file of files) {
     const { url, text } = JSON.parse(fs.readFileSync(path.join(rawDir, file), 'utf-8'));
-    const chunks = chunkText(cleanText(text), url);
+    const chunks = chunkText(cleanText(text), url, config.chunkSize, config.overlap);
 
     if (chunks.length > 0) {
       await generateEmbeddings(chunks);
