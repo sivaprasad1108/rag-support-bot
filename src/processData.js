@@ -1,35 +1,25 @@
 const fs = require('fs');
 const path = require('path');
+const config = require('./config');
 const cleanText = require('./preprocess/cleanText');
 const chunkText = require('./preprocess/chunkText');
 const generateEmbeddings = require('./embeddings/generateEmbeddings');
 
 async function processRawData() {
-  const rawDir = path.join(__dirname, '..', 'data', 'raw');
-  const processedDir = path.join(__dirname, '..', 'data', 'processed');
-
-  if (!fs.existsSync(processedDir)) {
-    fs.mkdirSync(processedDir, { recursive: true });
-  }
-
-  const files = fs.readdirSync(rawDir).filter(file => file.endsWith('.json'));
+  const rawDir = path.join(config.dataPath, 'raw');
+  const files = fs.readdirSync(rawDir).filter(f => f.endsWith('.json'));
 
   for (const file of files) {
-    const filePath = path.join(rawDir, file);
-    const rawData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-
-    const cleanedText = cleanText(rawData.text);
-    const chunks = chunkText(cleanedText, rawData.url);
+    const { url, text } = JSON.parse(fs.readFileSync(path.join(rawDir, file), 'utf-8'));
+    const chunks = chunkText(cleanText(text), url);
 
     if (chunks.length > 0) {
       await generateEmbeddings(chunks);
       console.log(`Processed ${file}: ${chunks.length} chunks`);
     } else {
-      console.log(`Skipped ${file}: no chunks generated`);
+      console.log(`Skipped ${file}: no text found`);
     }
   }
-
-  console.log('All raw data processed.');
 }
 
 if (require.main === module) {

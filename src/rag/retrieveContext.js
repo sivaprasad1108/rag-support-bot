@@ -1,57 +1,22 @@
 const OpenAI = require('openai');
 const config = require('../config');
 const VectorStore = require('../vectorstore/vectorStore');
+const mockEmbedding = require('../utils/mockEmbedding');
 
-let openai = null;
-const validApiKey = typeof config.openaiApiKey === 'string' && config.openaiApiKey.startsWith('sk-');
-if (validApiKey) {
-  openai = new OpenAI({
-    apiKey: config.openaiApiKey,
-  });
-} else if (config.openaiApiKey) {
-  console.warn('OPENAI_API_KEY appears invalid or placeholder; falling back to mock embeddings.');
-}
+const openai = config.openaiApiKey?.startsWith('sk-')
+  ? new OpenAI({ apiKey: config.openaiApiKey })
+  : null;
 
 const vectorStore = new VectorStore();
-
-try {
-  vectorStore.loadFromDirectory(config.vectorStorePath);
-  console.log(`Loaded ${vectorStore.size()} vectors from ${config.vectorStorePath}`);
-} catch (error) {
-  console.warn(`Failed to load persisted vectors: ${error.message}`);
-}
-
-function deterministicMockEmbedding(query) {
-  const length = 1536;
-  const embedding = new Array(length);
-  let hash = 0;
-  for (let i = 0; i < query.length; i++) {
-    hash = (hash * 31 + query.charCodeAt(i)) >>> 0;
-  }
-  for (let i = 0; i < length; i++) {
-    hash = (hash * 1664525 + 1013904223) >>> 0;
-    embedding[i] = ((hash % 2000) - 1000) / 1000;
-  }
-  return embedding;
-}
+vectorStore.loadFromDirectory(config.vectorStorePath);
+console.log(`Loaded ${vectorStore.size()} vectors`);
 
 async function embedQuery(query) {
   if (openai) {
-    const response = await openai.embeddings.create({
-      model: config.model,
-      input: query,
-    });
-    return response.data[0].embedding;
+    const res = await openai.embeddings.create({ model: config.model, input: query });
+    return res.data[0].embedding;
   }
-
-  console.warn('OPENAI_API_KEY not set; using deterministic mock query embedding.');
-  return deterministicMockEmbedding(query);
-}
-
-function buildContext(topChunks) {
-  return topChunks
-    .map(chunk => `URL: ${chunk.metadata.sourceUrl}\nChunk ID: ${chunk.metadata.chunkId}\nText: ${chunk.text}`)
-    .join('\n\n');
+  return mockEmbedding(query);
 }
 
 async function retrieveContext(query, topK = 5) {
@@ -62,18 +27,13 @@ async function retrieveContext(query, topK = 5) {
   const queryEmbedding = await embedQuery(query);
   const results = vectorStore.search(queryEmbedding, topK);
 
-  const context = buildContext(results);
-  const sources = [...new Set(results.map(result => result.metadata.sourceUrl))];
+  const context = results
+    .map(r => `Source: ${r.metadata.sourceUrl}\n${r.text}`)
+    .join('\n\n---\n\n');
 
-  return {
-    query,
-    context,
-    sources,
-    results,
-  };
+  const sources = [...new Set(results.map(r => r.metadata.sourceUrl))];
+
+  return { query, context, sources, results };
 }
 
-module.exports = {
-  vectorStore,
-  retrieveContext,
-};
+module.exports = { vectorStore, retrieveContext };

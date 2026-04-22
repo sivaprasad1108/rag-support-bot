@@ -3,14 +3,13 @@ const config = require('./config');
 const ragRoute = require('./api/ragRoute');
 
 const app = express();
-
-// Middleware to parse JSON
 app.use(express.json());
-
-// Register the /ask route
 app.use('/ask', ragRoute);
 
-// Start the server
-app.listen(config.port, () => {
-  console.log(`RAG Support Bot server running on port ${config.port}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+  app.listen(config.port, () => {
+    console.log(`Server running on http://localhost:${config.port}`);
+  });
+}

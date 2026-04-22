@@ -1,54 +1,44 @@
 const OpenAI = require('openai');
 const config = require('../config');
 
-const validApiKey = typeof config.openaiApiKey === 'string' && config.openaiApiKey.startsWith('sk-');
-let openai = null;
-if (validApiKey) {
-  openai = new OpenAI({
-    apiKey: config.openaiApiKey,
-  });
-} else if (config.openaiApiKey) {
-  console.warn('OPENAI_API_KEY is missing or invalid; generateAnswer will use a mock response for testing.');
-}
+const openai = config.openaiApiKey?.startsWith('sk-')
+  ? new OpenAI({ apiKey: config.openaiApiKey })
+  : null;
+
+const FALLBACK = `I don't have enough information from the provided source.`;
 
 async function generateAnswer(question, context, sources = []) {
   if (!question || typeof question !== 'string') {
     throw new Error('Question must be a non-empty string');
   }
-
   if (context == null || typeof context !== 'string') {
     throw new Error('Context must be provided as a string');
   }
 
-  const model = config.answerModel;
-  const systemPrompt = `You are an assistant that answers questions only using the provided context. Do not answer from your own knowledge or invent facts. If the answer cannot be found in the provided context, respond exactly:\n\n"I don’t have enough information from the provided source."`;
-
-  const messages = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: `Context:\n${context}\n\nQuestion: ${question}\n\nAnswer only from the provided context.` },
-  ];
+  const uniqueSources = Array.isArray(sources) ? [...new Set(sources)] : [];
 
   if (!openai) {
-    console.warn('OPENAI_API_KEY not available; generateAnswer is returning a mock test response.');
-    return {
-      answer: 'I don’t have enough information from the provided source.',
-      sources: Array.isArray(sources) ? [...new Set(sources)] : [],
-    };
+    return { answer: FALLBACK, sources: uniqueSources };
   }
 
   const response = await openai.chat.completions.create({
-    model,
-    messages,
+    model: config.answerModel,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a support assistant. Answer questions only using the provided context. If the answer is not in the context, say exactly: "${FALLBACK}"`,
+      },
+      {
+        role: 'user',
+        content: `Context:\n${context}\n\nQuestion: ${question}`,
+      },
+    ],
     temperature: 0,
     max_tokens: 512,
   });
 
-  const answer = response?.choices?.[0]?.message?.content?.trim();
-
-  return {
-    answer: answer || 'I don’t have enough information from the provided source.',
-    sources: Array.isArray(sources) ? [...new Set(sources)] : [],
-  };
+  const answer = response?.choices?.[0]?.message?.content?.trim() || FALLBACK;
+  return { answer, sources: uniqueSources };
 }
 
 module.exports = generateAnswer;

@@ -28,8 +28,8 @@ async function crawlWebsite(startUrl, maxPages = 100, autoProcess = false) {
       const response = await axios.get(url);
       const $ = cheerio.load(response.data);
 
-      // Extract main text (you can refine the selector as needed)
-      const text = $('body').text().replace(/\s+/g, ' ').trim();
+      // Extract main text — whitespace normalisation is handled by cleanText()
+      const text = $('body').text();
 
       // Create a filename from the URL
       const filename = url.replace(/[^a-zA-Z0-9]/g, '_') + '.json';
